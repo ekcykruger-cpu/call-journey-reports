@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import CxoneFetchCard from '../components/CxoneFetchCard.jsx';
 
 const MAX_MB = 50;
 
@@ -18,6 +19,14 @@ export default function ImportPage() {
     api('/imports').then((d) => setHistory(d.imports)).catch((err) => setError(err.message));
   }, []);
   useEffect(loadHistory, [loadHistory]);
+
+  // While a CXone fetch is queued or running, refresh the history every 5 seconds.
+  const inProgress = history.some((i) => i.status === 'queued' || i.status === 'running');
+  useEffect(() => {
+    if (!inProgress) return undefined;
+    const timer = setInterval(loadHistory, 5000);
+    return () => clearInterval(timer);
+  }, [inProgress, loadHistory]);
 
   async function handleUpload(e) {
     e.preventDefault();
@@ -48,6 +57,8 @@ export default function ImportPage() {
     <>
       <h1>Data</h1>
 
+      <CxoneFetchCard onQueued={loadHistory} busyElsewhere={inProgress} />
+
       <form className="card" onSubmit={handleUpload}>
         <h2>Upload a report 540 CSV</h2>
         <p className="muted small">
@@ -76,7 +87,7 @@ export default function ImportPage() {
         <table>
           <thead>
             <tr>
-              <th>#</th><th>When</th><th>Source</th><th>File</th><th>Status</th><th>Rows</th><th>Journeys</th><th>By</th><th>Notes</th>
+              <th>#</th><th>When</th><th>Source</th><th>File / day</th><th>Status</th><th>Rows</th><th>Journeys</th><th>By</th><th>Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -88,7 +99,7 @@ export default function ImportPage() {
                 <td>{i.id}</td>
                 <td>{formatDate(i.created_at)}</td>
                 <td>{i.source === 'cxone' ? 'CXone' : 'Upload'}</td>
-                <td>{i.file_name || '—'}</td>
+                <td>{i.file_name || i.range_start || '—'}</td>
                 <td><span className={`status status-${i.status}`}>{i.status}</span></td>
                 <td>{i.rows_upserted} / {i.rows_read}</td>
                 <td>{i.journeys_rebuilt}</td>

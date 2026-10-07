@@ -19,6 +19,7 @@ export default function Layout() {
             <NavLink to="/" end>Dashboard</NavLink>
             {user.role === 'admin' && <NavLink to="/data">Data</NavLink>}
             {user.role === 'admin' && <NavLink to="/users">Users</NavLink>}
+            {user.role === 'admin' && <NavLink to="/settings">Settings</NavLink>}
           </nav>
           <div className="topbar-user">
             <span className="muted">{user.displayName || user.email}</span>

@@ -160,6 +160,24 @@ tr.inactive td { opacity: 0.55; }
 td.actions { display: flex; gap: 14px; }
 td.notes { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
 
+textarea {
+  font: inherit;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.button-row { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; }
+.text-error { color: var(--error-text); font-weight: 600; }
+
 .status { font-size: 0.85rem; padding: 2px 8px; border-radius: 10px; background: var(--bg); }
 .status-done { background: var(--success-bg); color: var(--success-text); }
 .status-failed { background: var(--error-bg); color: var(--error-text); }

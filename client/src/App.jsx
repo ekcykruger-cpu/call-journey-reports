@@ -7,6 +7,7 @@ import SetPasswordPage from './pages/SetPasswordPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
+import SettingsPage from './pages/SettingsPage.jsx';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/data" element={<RequireAuth admin><ImportPage /></RequireAuth>} />
             <Route path="/users" element={<RequireAuth admin><UsersPage /></RequireAuth>} />
+            <Route path="/settings" element={<RequireAuth admin><SettingsPage /></RequireAuth>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

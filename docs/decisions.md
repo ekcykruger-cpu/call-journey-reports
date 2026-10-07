@@ -17,4 +17,6 @@ Short record of design decisions and why. Add a new entry rather than editing ol
 | 11 | 2026-10-07 | First admin created via `npm run create-admin`, which prints a set-password link | No default password ever exists; no password typed into a terminal |
 | 13 | 2026-10-07 | Import = upsert legs + reload all connected legs from the DB, re-stitch, upsert journeys, delete stale journeys — one transaction | Transfers that span two imports link up correctly; a failed import changes nothing |
 | 14 | 2026-10-07 | Tests use an anonymised fixture (`server/test/fixtures/report540-anon.csv`) | Real sample stays out of Git |
+| 15 | 2026-10-08 | CXone fetch = one request per Sydney day, run in the background, one fetch at a time; unverified API details are env settings + runtime detection, with response *shape* logged | CXone docs couldn't be read automatically; overlap-safe and correctable without code changes |
+| 16 | 2026-10-08 | Imports left queued/running are marked failed at startup | A redeploy mid-fetch would otherwise leave them "running" forever |
 | 12 | 2026-10-07 | Until Gmail is set up, invite/reset emails are written to the server log and invite links are shown to the admin | Lets login work end to end before the Google Cloud setup |

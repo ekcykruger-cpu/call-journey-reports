@@ -11,6 +11,8 @@ import { checkOrigin, loadUser, requireAuth } from './auth/middleware.js';
 import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
 import { importsRouter } from './routes/imports.js';
+import { cxoneRouter } from './routes/cxone.js';
+import { failInterruptedImports } from './import/importService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(__dirname, '../../client/dist');
@@ -52,6 +54,7 @@ api.use(loadUser);
 api.use('/auth', authRouter);
 api.use('/users', usersRouter);
 api.use('/imports', importsRouter);
+api.use('/cxone', cxoneRouter);
 api.get('/hello', requireAuth, (req, res) => {
   res.json({ message: `Hello ${req.user.displayName || req.user.email}` });
 });
@@ -81,6 +84,7 @@ app.use((err, req, res, next) => {
 // Bring the database schema up to date, then start accepting requests.
 try {
   await runMigrations();
+  if (pool) await failInterruptedImports();
 } catch (err) {
   console.error('[startup] migrations failed:', err.message);
   process.exit(1);

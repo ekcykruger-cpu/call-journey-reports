@@ -66,16 +66,47 @@ async function upsertRows(conn, table, columns, rows) {
   }
 }
 
-// Returns a summary: { importId, rowsRead, rowsUpserted, skipped, journeysRebuilt, errors[] }.
-export async function importReportCsv(text, { source, fileName = null, requestedBy = null, rangeStart = null, rangeEnd = null }) {
-  const pool = requirePool();
-  const [created] = await pool.query(
+// Creates the history row for an import. Status starts 'queued' (CXone fetches) or 'running' (uploads).
+export async function createImport({ source, fileName = null, requestedBy = null, rangeStart = null, rangeEnd = null, status = 'running' }) {
+  const [created] = await requirePool().query(
     `INSERT INTO imports (source, file_name, range_start, range_end, requested_by, status, started_at)
-     VALUES (?, ?, ?, ?, ?, 'running', UTC_TIMESTAMP())`,
-    [source, fileName, rangeStart, rangeEnd, requestedBy],
+     VALUES (?, ?, ?, ?, ?, ?, IF(? = 'running', UTC_TIMESTAMP(), NULL))`,
+    [source, fileName, rangeStart, rangeEnd, requestedBy, status, status],
   );
-  const importId = created.insertId;
+  return created.insertId;
+}
 
+// At startup nothing can still be in progress: anything queued/running was cut off by a restart.
+export async function failInterruptedImports() {
+  const [result] = await requirePool().query(
+    `UPDATE imports SET status = 'failed', error_text = 'Interrupted by a server restart - fetch this day again.',
+            finished_at = UTC_TIMESTAMP()
+      WHERE status IN ('queued', 'running')`,
+  );
+  if (result.affectedRows) console.warn(`[import] marked ${result.affectedRows} interrupted import(s) as failed`);
+}
+
+export async function markImportRunning(importId) {
+  await requirePool().query("UPDATE imports SET status = 'running', started_at = UTC_TIMESTAMP() WHERE id = ?", [importId]);
+}
+
+export async function failImport(importId, message) {
+  await requirePool().query(
+    "UPDATE imports SET status = 'failed', error_text = ?, finished_at = UTC_TIMESTAMP() WHERE id = ?",
+    [message, importId],
+  );
+}
+
+// Manual upload: create the history row and process the file straight away.
+export async function importReportCsv(text, options) {
+  const importId = await createImport({ ...options, status: 'running' });
+  return processImport(importId, text);
+}
+
+// Parses and saves CSV text for an existing import row.
+// Returns a summary: { importId, rowsRead, rowsUpserted, skipped, journeysRebuilt, errors[] }.
+export async function processImport(importId, text) {
+  const pool = requirePool();
   try {
     const parsed = parseReportCsv(text);
     for (const leg of parsed.legs) leg.import_id = importId;
@@ -116,10 +147,7 @@ export async function importReportCsv(text, { source, fileName = null, requested
     );
     return summary;
   } catch (err) {
-    await pool.query(
-      "UPDATE imports SET status = 'failed', error_text = ?, finished_at = UTC_TIMESTAMP() WHERE id = ?",
-      [err.message, importId],
-    );
+    await failImport(importId, err.message);
     err.status = 400;
     err.expose = true;
     err.message = `Import failed: ${err.message}`;

@@ -21,4 +21,14 @@ export const config = {
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
   databaseUrl: process.env.DATABASE_URL || '',
   timezone: 'Australia/Sydney',
+
+  // CXone - see docs/cxone-api.md. Items marked (verify) there are settings so they can be corrected without code changes.
+  cxone: {
+    apiBase: (process.env.CXONE_API_BASE || 'https://api-na1.niceincontact.com/incontactapi/services/v34.0').replace(/\/$/, ''),
+    reportId: process.env.CXONE_REPORT_ID || '540',
+    reportJobMethod: (process.env.CXONE_REPORT_JOB_METHOD || 'POST').toUpperCase(),
+    fileFolder: process.env.CXONE_FILE_FOLDER ?? 'Reports\\\\', // literal Reports\\ as in the owner's working URL
+    fileNamePrefix: process.env.CXONE_FILE_PREFIX || 'CJR_540_',
+    maxDaysPerFetch: Number(process.env.CXONE_MAX_DAYS_PER_FETCH) || 31,
+  },
 };
