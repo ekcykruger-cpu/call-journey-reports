@@ -15,4 +15,6 @@ Short record of design decisions and why. Add a new entry rather than editing ol
 | 9 | 2026-10-07 | `sample/` is gitignored | Sample contains phone numbers that may be real |
 | 10 | 2026-10-07 | Own MySQL session store (`server/src/auth/sessionStore.js`) instead of `express-mysql-session` | That package pins `mysql2@3.10.2`, which has known high-severity vulnerabilities |
 | 11 | 2026-10-07 | First admin created via `npm run create-admin`, which prints a set-password link | No default password ever exists; no password typed into a terminal |
+| 13 | 2026-10-07 | Import = upsert legs + reload all connected legs from the DB, re-stitch, upsert journeys, delete stale journeys — one transaction | Transfers that span two imports link up correctly; a failed import changes nothing |
+| 14 | 2026-10-07 | Tests use an anonymised fixture (`server/test/fixtures/report540-anon.csv`) | Real sample stays out of Git |
 | 12 | 2026-10-07 | Until Gmail is set up, invite/reset emails are written to the server log and invite links are shown to the admin | Lets login work end to end before the Google Cloud setup |

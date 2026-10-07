@@ -10,6 +10,7 @@ import { MySqlSessionStore } from './auth/sessionStore.js';
 import { checkOrigin, loadUser, requireAuth } from './auth/middleware.js';
 import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
+import { importsRouter } from './routes/imports.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.resolve(__dirname, '../../client/dist');
@@ -50,6 +51,7 @@ api.use(loadUser);
 
 api.use('/auth', authRouter);
 api.use('/users', usersRouter);
+api.use('/imports', importsRouter);
 api.get('/hello', requireAuth, (req, res) => {
   res.json({ message: `Hello ${req.user.displayName || req.user.email}` });
 });

@@ -6,6 +6,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import SetPasswordPage from './pages/SetPasswordPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
+import ImportPage from './pages/ImportPage.jsx';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           {/* Logged-in pages share the header/nav */}
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/data" element={<RequireAuth admin><ImportPage /></RequireAuth>} />
             <Route path="/users" element={<RequireAuth admin><UsersPage /></RequireAuth>} />
           </Route>
 

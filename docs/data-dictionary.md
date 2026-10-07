@@ -1,6 +1,7 @@
 # Data dictionary — CXone report 540
 
-Learned from `sample/EK_540_sample.xlsx` (10 rows, 2 journeys). Unconfirmed items are marked **(verify)**.
+Learned from `sample/EK_540_sample.xlsx` (9 legs, 2 journeys of 4 and 5 legs). An anonymised copy used by
+the tests is in `server/test/fixtures/report540-anon.csv`. Unconfirmed items are marked **(verify)**.
 
 ## Grain
 One row = one **contact leg**. A customer call that is transferred produces several legs.
