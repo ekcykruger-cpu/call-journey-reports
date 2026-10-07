@@ -1,0 +1,11 @@
+node_modules/
+client/dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Sample data may contain real customer phone numbers - kept out of Git until anonymised.
+sample/
