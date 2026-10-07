@@ -90,6 +90,19 @@ export async function markImportRunning(importId) {
   await requirePool().query("UPDATE imports SET status = 'running', started_at = UTC_TIMESTAMP() WHERE id = ?", [importId]);
 }
 
+export async function setImportFileName(importId, fileName) {
+  await requirePool().query('UPDATE imports SET file_name = ? WHERE id = ?', [fileName, importId]);
+}
+
+// A successful fetch that had nothing to import (e.g. CXone answered 204 No Content).
+export async function completeImportWithoutData(importId, fileName, note) {
+  await requirePool().query(
+    `UPDATE imports SET status = 'done', file_name = ?, rows_read = 0, rows_upserted = 0, journeys_rebuilt = 0,
+            error_text = ?, finished_at = UTC_TIMESTAMP() WHERE id = ?`,
+    [fileName, note, importId],
+  );
+}
+
 export async function failImport(importId, message) {
   await requirePool().query(
     "UPDATE imports SET status = 'failed', error_text = ?, finished_at = UTC_TIMESTAMP() WHERE id = ?",

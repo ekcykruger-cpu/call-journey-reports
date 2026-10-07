@@ -49,11 +49,26 @@ export function findBase64(value) {
   return best?.value ?? null;
 }
 
-async function cxoneRequest(method, pathAndQuery, label) {
+// The bearer token is only ever sent to https CXone hosts.
+const TRUSTED_HOST_SUFFIXES = ['.nice-incontact.com', '.niceincontact.com'];
+
+export function isTrustedCxoneUrl(value) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && TRUSTED_HOST_SUFFIXES.some((s) => host.endsWith(s) || host === s.slice(1));
+  } catch {
+    return false;
+  }
+}
+
+// `target` is either a path under CXONE_API_BASE or a full URL returned by CXone.
+async function cxoneRequest(method, target, label) {
   const token = await tokenProvider.getToken();
+  const url = /^https?:\/\//i.test(target) ? target : `${config.cxone.apiBase}/${target}`;
   let res;
   try {
-    res = await fetch(`${config.cxone.apiBase}/${pathAndQuery}`, {
+    res = await fetch(url, {
       method,
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -81,20 +96,38 @@ async function cxoneRequest(method, pathAndQuery, label) {
     const detail = text.slice(0, 300).replace(/\s+/g, ' ');
     throw new CxoneError(`${label}: CXone returned HTTP ${res.status}. ${detail}`, { status: res.status, retryable: res.status === 404 || res.status >= 500 });
   }
-  return { body, text };
+  return { status: res.status, body, text };
 }
 
+// Confirmed on the owner's tenant: POST → 200 with { errorMessage, fileName, file, URI } where URI is the
+// address to fetch the saved file from; 204 with an empty body when there was nothing to report.
+// Returns { noData } or { fileUri }.
 export async function runReportJob({ fileName, startDate, endDate }) {
   const query = new URLSearchParams({ fileName, startDate, endDate, saveAsFile: 'true', includeHeaders: 'true' });
-  await cxoneRequest(config.cxone.reportJobMethod, `report-jobs/datadownload/${encodeURIComponent(config.cxone.reportId)}?${query}`, 'Run report');
+  const { status, body } = await cxoneRequest(
+    config.cxone.reportJobMethod,
+    `report-jobs/datadownload/${encodeURIComponent(config.cxone.reportId)}?${query}`,
+    'Run report',
+  );
+  if (status === 204) return { noData: true };
+  if (typeof body?.errorMessage === 'string' && body.errorMessage.trim()) {
+    throw new CxoneError(`Run report: CXone reported an error: ${body.errorMessage.trim().slice(0, 300)}`);
+  }
+  return { noData: false, fileUri: typeof body?.URI === 'string' ? body.URI : null };
 }
 
 // Fetches the saved file, retrying for a while in case CXone hasn't finished writing it yet.
-export async function fetchReportFile(fileName) {
-  const path = `files?fileName=${encodeURIComponent(config.cxone.fileFolder + fileName)}`;
+// Uses the URI CXone returned when it is a trusted CXone address; otherwise builds the address itself.
+export async function fetchReportFile(fileName, fileUri = null) {
+  let target = `files?fileName=${encodeURIComponent(config.cxone.fileFolder + fileName)}`;
+  if (fileUri && isTrustedCxoneUrl(fileUri)) {
+    target = fileUri;
+  } else if (fileUri) {
+    console.warn('[cxone] ignoring file URI from CXone: not an https CXone address; using the configured API base instead');
+  }
   for (let attempt = 0; ; attempt++) {
     try {
-      const { body, text } = await cxoneRequest('GET', path, 'Fetch file');
+      const { body, text } = await cxoneRequest('GET', target, 'Fetch file');
       if (!body) return text; // the API returned the file itself rather than JSON
       const base64 = findBase64(body);
       if (!base64) throw new CxoneError('Fetch file: no base64 file content found in the CXone response (see server log for its shape).');
@@ -106,7 +139,9 @@ export async function fetchReportFile(fileName) {
   }
 }
 
+// Returns { noData: true } or { noData: false, csv }.
 export async function downloadReport({ fileName, startDate, endDate }) {
-  await runReportJob({ fileName, startDate, endDate });
-  return fetchReportFile(fileName);
+  const job = await runReportJob({ fileName, startDate, endDate });
+  if (job.noData) return { noData: true };
+  return { noData: false, csv: await fetchReportFile(fileName, job.fileUri) };
 }

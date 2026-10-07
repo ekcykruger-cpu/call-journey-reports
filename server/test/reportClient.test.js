@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { describeShape, downloadReport, findBase64 } from '../src/cxone/reportClient.js';
+import { describeShape, downloadReport, findBase64, isTrustedCxoneUrl } from '../src/cxone/reportClient.js';
 import { CxoneAuthError, tokenProvider } from '../src/cxone/tokenProvider.js';
 
 // These tests use a fake CXone (a stubbed fetch); they check our handling, not CXone's real behaviour.
@@ -43,23 +43,49 @@ describe('downloadReport against a fake CXone', () => {
     }));
   }
 
-  it('runs the report, then fetches and decodes the file', async () => {
-    fakeCxone((url) => (url.includes('report-jobs') ? json(202, { jobId: 1 }) : json(200, { files: { file: B64 } })));
-    const csv = await downloadReport({ fileName: 'CJR_540_7.csv', startDate: '2026-10-04', endDate: '2026-10-05' });
+  // Response shapes below are the ones CXone returned on the owner's tenant (see docs/cxone-api.md).
+  const FILE_URI = 'https://api-b32.nice-incontact.com/inContactAPI/services/V35.0/files?fileName=Reports%5CCJR_540_7.csv';
+  const runOk = (uri = FILE_URI) => json(200, { errorMessage: '', fileName: 'Reports\\CJR_540_7.csv', file: '', URI: uri });
+  const fileOk = () => json(200, { files: { file: B64, fileName: 'CJR_540_7.csv' } });
+  const args = { fileName: 'CJR_540_7.csv', startDate: '2026-10-04', endDate: '2026-10-05' };
 
-    expect(csv).toBe(CSV);
+  it('runs the report (POST), then fetches the file from the URI CXone returned and decodes it', async () => {
+    fakeCxone((url) => (url.includes('report-jobs') ? runOk() : fileOk()));
+    const result = await downloadReport(args);
+
+    expect(result).toEqual({ noData: false, csv: CSV });
     expect(calls[0].method).toBe('POST');
     expect(calls[0].url).toContain('report-jobs/datadownload/540?fileName=CJR_540_7.csv&startDate=2026-10-04&endDate=2026-10-05&saveAsFile=true&includeHeaders=true');
-    expect(calls[1].url).toContain('files?fileName=Reports%5C%5CCJR_540_7.csv'); // same encoding as the owner's working URL
+    expect(calls[1].url).toBe(FILE_URI);
     expect(calls[1].auth).toBe('Bearer test-token-1234567890');
+  });
+
+  it('does not send the token to a non-CXone URI; falls back to the configured API base', async () => {
+    fakeCxone((url) => (url.includes('report-jobs') ? runOk('https://evil.example.com/files?x=1') : fileOk()));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await downloadReport(args);
+    expect(calls[1].url).toContain('api-na1.niceincontact.com');
+    expect(calls[1].url).toContain('files?fileName=Reports%5C%5CCJR_540_7.csv'); // the owner's original working format
+  });
+
+  it('treats 204 No Content as "no data" and skips the file fetch', async () => {
+    fakeCxone(() => new Response(null, { status: 204 }));
+    expect(await downloadReport(args)).toEqual({ noData: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('stops with CXone\'s errorMessage when it is filled in', async () => {
+    fakeCxone(() => json(200, { errorMessage: 'Report not found', fileName: '', file: '', URI: '' }));
+    await expect(downloadReport(args)).rejects.toThrow(/Report not found/);
+    expect(calls).toHaveLength(1);
   });
 
   it('retries while the file is not ready yet (404)', async () => {
     vi.useFakeTimers();
-    fakeCxone((url, n) => (url.includes('report-jobs') ? json(202, {}) : n < 4 ? json(404, { error: 'not found' }) : json(200, { file: B64 })));
-    const pending = downloadReport({ fileName: 'a.csv', startDate: '2026-10-04', endDate: '2026-10-05' });
+    fakeCxone((url, n) => (url.includes('report-jobs') ? runOk() : n < 4 ? json(404, { error: 'not found' }) : fileOk()));
+    const pending = downloadReport(args);
     await vi.runAllTimersAsync();
-    expect(await pending).toBe(CSV);
+    expect((await pending).csv).toBe(CSV);
     expect(calls).toHaveLength(4); // 1 run + 2 not-ready + 1 success
   });
 
@@ -78,6 +104,17 @@ describe('downloadReport against a fake CXone', () => {
     fakeCxone(() => json(200, {}));
     await expect(downloadReport({ fileName: 'a.csv', startDate: '2026-10-04', endDate: '2026-10-05' })).rejects.toThrow(/No CXone bearer token/);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('isTrustedCxoneUrl', () => {
+  it('accepts https CXone hosts only', () => {
+    expect(isTrustedCxoneUrl('https://api-b32.nice-incontact.com/x')).toBe(true);
+    expect(isTrustedCxoneUrl('https://api-na1.niceincontact.com/x')).toBe(true);
+    expect(isTrustedCxoneUrl('http://api-b32.nice-incontact.com/x')).toBe(false);
+    expect(isTrustedCxoneUrl('https://nice-incontact.com.evil.com/x')).toBe(false);
+    expect(isTrustedCxoneUrl('https://evilnice-incontact.com/x')).toBe(false);
+    expect(isTrustedCxoneUrl('not a url')).toBe(false);
   });
 });
 

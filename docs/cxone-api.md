@@ -7,12 +7,20 @@ The CXone developer portal renders with JavaScript, so it can't be read by Claud
 Base: `CXONE_API_BASE`, default `https://api-na1.niceincontact.com/incontactapi/services/v34.0`
 (**verify** this cluster/host matches your Business Unit).
 
-1. Run report 540 and save it as a file:
-   `report-jobs/datadownload/540?fileName=CJR_540_<importId>.csv&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&saveAsFile=true&includeHeaders=true`
-   HTTP method: `CXONE_REPORT_JOB_METHOD`, default `POST` **(verify)**. A 405 response tells you to switch it.
-2. Fetch the saved file: `GET files?fileName=Reports%5C%5CCJR_540_<importId>.csv` (i.e. `Reports\\<name>`).
-   Response contains the file **base64-encoded**. The code prefers a JSON field named `file`, otherwise the longest
-   base64-looking string **(verify field name)**. Retries on 404/5xx for ~1 minute in case the file isn't ready.
+1. Run report 540 and save it as a file — **POST** (confirmed by owner, 2026-10-08):
+   `report-jobs/datadownload/540?fileName=<unique name>&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&saveAsFile=true&includeHeaders=true`
+   - The **file name must be unique for every call** (confirmed by owner). We use `CJR_540_<importId>_<UTC yyyyMMddTHHmmss>.csv`.
+   - **200** response (confirmed):
+     `{ "errorMessage": "", "fileName": "Reports\\EK_540_3.csv", "file": "", "URI": "https://api-b32.nice-incontact.com/inContactAPI/services/V35.0/files?fileName=Reports%5CEK_540_3.csv" }`
+     `URI` is where the saved file can be fetched — note it is the tenant's own cluster host and a different API version.
+     A non-empty `errorMessage` is treated as a failure.
+   - **204** with an empty body was returned for "today" (2026-10-08, endDate = tomorrow). Treated as
+     "no data for this period" — the day is marked done with 0 rows. **(verify the exact meaning of 204)**
+2. Fetch the saved file — **GET** the `URI` from step 1. Only followed if it is `https` on `*.nice-incontact.com` or
+   `*.niceincontact.com` (so the token can't be sent elsewhere); otherwise falls back to
+   `{CXONE_API_BASE}/files?fileName=Reports%5C%5C<name>`, which also worked (2026-10-07).
+   - **200** response (confirmed): `{ "files": { "file": "<base64>", "fileName": "<name>" } }` — the CSV is `files.file`.
+   - Retries on 404/5xx for ~1 minute in case the file isn't ready.
 
 Every call logs `[cxone] <step>: HTTP <status>; response shape: {...}` — field names and sizes only, never data —
 so the real response structure can be confirmed from Railway's Deploy Logs.
@@ -23,7 +31,7 @@ so the real response structure can be confirmed from Railway's Deploy Logs.
   because re-imported rows are updated, not duplicated.
 - One fetch runs at a time; days run one after another. Each day is a row in the import history.
 - A token problem (401/403/expired) stops the remaining days.
-- Files are left in CXone's file storage under unique names (`CJR_540_<importId>.csv`) **(verify whether to clean up)**.
+- Files are left in CXone's file storage under unique names **(verify whether to clean up)**.
 
 ## Settings (Railway → web service → Variables; all optional)
 | Variable | Default | Purpose |
@@ -37,9 +45,8 @@ so the real response structure can be confirmed from Railway's Deploy Logs.
 | `CXONE_BEARER_TOKEN` | — | Token loaded at startup (otherwise paste on Settings page) |
 
 ## To verify in the CXone developer docs
-- HTTP method for `report-jobs/datadownload/{reportId}`.
 - Whether `endDate` is inclusive; maximum range per call; which timezone startDate/endDate use (BU timezone or UTC).
-- Exact JSON field that holds the base64 file in the `files` response.
+- Exact meaning of a 204 from the run-report call.
 - Whether saved files should be deleted afterwards (and the endpoint for it).
 - Authentication flow for minting tokens automatically (grant type, token endpoint, token lifetime).
 

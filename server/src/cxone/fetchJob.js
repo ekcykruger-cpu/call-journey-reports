@@ -1,6 +1,13 @@
 import { DateTime } from 'luxon';
 import { config } from '../config.js';
-import { createImport, failImport, markImportRunning, processImport } from '../import/importService.js';
+import {
+  completeImportWithoutData,
+  createImport,
+  failImport,
+  markImportRunning,
+  processImport,
+  setImportFileName,
+} from '../import/importService.js';
 import { downloadReport } from './reportClient.js';
 import { CxoneAuthError, tokenProvider } from './tokenProvider.js';
 
@@ -53,11 +60,18 @@ export async function startCxoneFetch({ from, to, requestedBy }) {
 async function runJobs(jobs) {
   for (let i = 0; i < jobs.length; i++) {
     const { importId, startDate, endDate } = jobs[i];
-    const fileName = `${config.cxone.fileNamePrefix}${importId}.csv`;
+    // CXone needs a unique file name per call: import number + UTC timestamp can't repeat.
+    const fileName = `${config.cxone.fileNamePrefix}${importId}_${DateTime.utc().toFormat("yyyyLLdd'T'HHmmss")}.csv`;
     try {
       await markImportRunning(importId);
-      const csv = await downloadReport({ fileName, startDate, endDate });
-      await processImport(importId, csv);
+      await setImportFileName(importId, fileName);
+      const result = await downloadReport({ fileName, startDate, endDate });
+      if (result.noData) {
+        await completeImportWithoutData(importId, fileName, 'CXone returned no data for this period (HTTP 204).');
+        console.log(`[cxone] import ${importId} (${startDate}) done: no data`);
+        continue;
+      }
+      await processImport(importId, result.csv);
       console.log(`[cxone] import ${importId} (${startDate}) done`);
     } catch (err) {
       console.error(`[cxone] import ${importId} (${startDate}) failed: ${err.message}`);
