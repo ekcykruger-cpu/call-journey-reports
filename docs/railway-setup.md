@@ -27,7 +27,17 @@ Railway sets `PORT` itself — the app already reads it.
 Open `https://<your-railway-domain>/healthz` → should show `{"status":"ok",...}`.
 Then open the domain root → should show the "Call Journey Reports" page with API health ok.
 
-## Later phases
-- Add a **MySQL** service to the project and reference its connection variable from the web service
-  (check Railway docs for the exact variable names, e.g. "MySQL" and "Variable references").
+## 5. Database (Phase 2)
+1. In the project: **+ New → Database → MySQL**.
+2. **Web service** → Variables → add `DATABASE_URL` as a *reference* to the MySQL service's **internal/private**
+   connection URL (traffic stays inside Railway). Check Railway docs: "MySQL", "Variable references", "Private networking".
+3. **Your laptop** → in `.env` set `DATABASE_URL` to the MySQL service's **public** connection URL.
+   Never paste it into chat or commit it.
+4. Tables are created automatically when the server starts (migrations). You can also run them by hand:
+   ```powershell
+   npm run migrate
+   ```
+5. Check: `/healthz` should now show `"db":"ok"`.
+
+## Later
 - Check your Railway plan's rules on outbound network traffic (we use HTTPS only: CXone API and Gmail API).

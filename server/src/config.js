@@ -7,5 +7,6 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
+  databaseUrl: process.env.DATABASE_URL || '',
   timezone: 'Australia/Sydney',
 };
