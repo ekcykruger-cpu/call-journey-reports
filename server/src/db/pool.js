@@ -16,8 +16,29 @@ export const pool = config.databaseUrl
   : null;
 
 export function requirePool() {
-  if (!pool) throw new Error('DATABASE_URL is not set - see .env.example');
+  if (!pool) {
+    const err = new Error('Database not configured (DATABASE_URL is not set)');
+    err.status = 503;
+    err.expose = true;
+    throw err;
+  }
   return pool;
+}
+
+// Runs fn(conn) inside a transaction; commits on success, rolls back on any error.
+export async function withTransaction(fn) {
+  const conn = await requirePool().getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await fn(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 export async function checkDb() {

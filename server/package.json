@@ -7,10 +7,16 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch --env-file-if-exists=../.env src/index.js",
-    "migrate": "node --env-file-if-exists=../.env src/db/migrate.js"
+    "migrate": "node --env-file-if-exists=../.env src/db/migrate.js",
+    "create-admin": "node --env-file-if-exists=../.env src/scripts/create-admin.js"
   },
   "dependencies": {
+    "argon2": "^0.45.1",
     "express": "^5.1.0",
-    "mysql2": "^3.24.5"
+    "express-rate-limit": "^8.7.1",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "mysql2": "^3.24.5",
+    "zod": "^4.6.5"
   }
 }

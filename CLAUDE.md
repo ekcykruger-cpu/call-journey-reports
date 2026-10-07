@@ -15,6 +15,8 @@ Hosted on **Railway** (one Node web service + one MySQL service).
 - `npm run dev:server` and `npm run dev:client` — run in two terminals; open http://localhost:5173
 - `npm run build` — build the client; `npm start` — run production server on :3000
 - `npm test` — run tests
+- `npm run migrate` — apply DB migrations (also runs automatically on server start)
+- `npm run create-admin -- you@example.com "Name" --base-url https://<domain>` — create/promote an admin, prints a set-password link
 
 ## Data rules (do not break)
 - One CSV row = one **leg**. `Contact_ID` is unique per row; re-imports **upsert** by `Contact_ID`.

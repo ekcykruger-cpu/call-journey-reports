@@ -1,20 +1,31 @@
-import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, RequireAuth } from './auth.jsx';
+import Layout from './components/Layout.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import SetPasswordPage from './pages/SetPasswordPage.jsx';
+import HomePage from './pages/HomePage.jsx';
+import UsersPage from './pages/UsersPage.jsx';
 
-// Placeholder page for Phase 1: proves the React app can talk to the Express API.
 export default function App() {
-  const [health, setHealth] = useState('checking…');
-
-  useEffect(() => {
-    fetch('/healthz')
-      .then((r) => r.json())
-      .then((d) => setHealth(`${d.status} at ${d.time}`))
-      .catch(() => setHealth('API not reachable'));
-  }, []);
-
   return (
-    <main className="container">
-      <h1>Call Journey Reports</h1>
-      <p>API health: {health}</p>
-    </main>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public pages */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/set-password" element={<SetPasswordPage />} />
+
+          {/* Logged-in pages share the header/nav */}
+          <Route element={<RequireAuth><Layout /></RequireAuth>}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/users" element={<RequireAuth admin><UsersPage /></RequireAuth>} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

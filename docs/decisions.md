@@ -13,3 +13,6 @@ Short record of design decisions and why. Add a new entry rather than editing ol
 | 7 | 2026-10-07 | Password-reset email via Gmail API (OAuth2 refresh token over HTTPS) | Avoids possible outbound SMTP restrictions on Railway |
 | 8 | 2026-10-07 | CXone bearer token pasted into memory for now, behind a `TokenProvider` interface | Lets us add automatic token minting later without touching the import code |
 | 9 | 2026-10-07 | `sample/` is gitignored | Sample contains phone numbers that may be real |
+| 10 | 2026-10-07 | Own MySQL session store (`server/src/auth/sessionStore.js`) instead of `express-mysql-session` | That package pins `mysql2@3.10.2`, which has known high-severity vulnerabilities |
+| 11 | 2026-10-07 | First admin created via `npm run create-admin`, which prints a set-password link | No default password ever exists; no password typed into a terminal |
+| 12 | 2026-10-07 | Until Gmail is set up, invite/reset emails are written to the server log and invite links are shown to the admin | Lets login work end to end before the Google Cloud setup |

@@ -28,16 +28,46 @@ Open `https://<your-railway-domain>/healthz` → should show `{"status":"ok",...
 Then open the domain root → should show the "Call Journey Reports" page with API health ok.
 
 ## 5. Database (Phase 2)
-1. In the project: **+ New → Database → MySQL**.
-2. **Web service** → Variables → add `DATABASE_URL` as a *reference* to the MySQL service's **internal/private**
-   connection URL (traffic stays inside Railway). Check Railway docs: "MySQL", "Variable references", "Private networking".
-3. **Your laptop** → in `.env` set `DATABASE_URL` to the MySQL service's **public** connection URL.
+Checked against Railway docs (MySQL guide, Variables guide) on 2026-10-07.
+
+### 5a. Add MySQL
+1. On the **Project Canvas** click **+ New** (or press **Ctrl + K**) → **MySQL**.
+2. Wait until the new **MySQL** box shows as running.
+
+### 5b. Connect the web service to MySQL (inside Railway)
+The MySQL service provides `MYSQL_URL` (internal, for services in the same project).
+1. Click the **web service** box → **Variables** tab → **New Variable**.
+2. Name `DATABASE_URL`, value exactly: `${{MySQL.MYSQL_URL}}`
+   (`MySQL` must match the database box's name; the `${{` autocomplete helps).
+3. Variable changes are **staged** — review and **deploy** them from the banner.
+4. Check: `https://<your-railway-domain>/healthz` shows `"db":"ok"`. Tables are created automatically on startup.
+
+### 5c. Connect your laptop (for local development)
+1. **MySQL** box → **Settings → Networking** → enable **Public Access**.
+   Railway bills network egress through this public TCP proxy.
+2. MySQL box → **Variables** → copy **`MYSQL_PUBLIC_URL`**.
+3. In the project folder create `.env` (copy of `.env.example`) and set `DATABASE_URL=<MYSQL_PUBLIC_URL value>`.
    Never paste it into chat or commit it.
-4. Tables are created automatically when the server starts (migrations). You can also run them by hand:
+4. Run `npm run migrate` → `applied N migration(s)` or `database is up to date`.
+
+## 6. Login (Phase 3)
+
+### 6a. Session secret — do this BEFORE pushing Phase 3
+The app refuses to start in production without it.
+1. Generate a random value (PowerShell):
    ```powershell
-   npm run migrate
+   $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
    ```
-5. Check: `/healthz` should now show `"db":"ok"`.
+2. Web service → **Variables** → **New Variable**: `SESSION_SECRET` = that value → deploy the staged change.
+   (Changing it later logs everyone out.)
+
+### 6b. Create your admin account
+From your laptop (needs 5c), replacing the email, name and domain:
+```powershell
+npm run create-admin -- you@example.com "Your Name" --base-url https://<your-railway-domain>
+```
+It prints a one-time link — open it, choose a password (12+ characters), then log in.
+Run it again any time to get a fresh link (e.g. if you're locked out).
 
 ## Later
 - Check your Railway plan's rules on outbound network traffic (we use HTTPS only: CXone API and Gmail API).
