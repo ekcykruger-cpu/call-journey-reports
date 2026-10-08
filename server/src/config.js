@@ -36,6 +36,7 @@ export const config = {
       basic: process.env.CXONE_AUTH_BASIC || '', // ready-made value that goes after "Basic " in the header
       username: process.env.CXONE_AUTH_USERNAME || '', // Access Key ID
       password: process.env.CXONE_AUTH_PASSWORD || '', // Access Key Secret
+      bodyFormat: (process.env.CXONE_AUTH_BODY_FORMAT || 'form').toLowerCase(), // 'form' (default) or 'json'
     },
   },
 };

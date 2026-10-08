@@ -33,23 +33,38 @@ describe('OAuthTokenProvider', () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  function provider(responder = () => json(200, { access_token: `token-${requests.length}`, expires_in: 3600 })) {
+  function provider(responder = () => json(200, { access_token: `token-${requests.length}`, expires_in: 3600 }), creds = CREDS) {
     const fetchImpl = vi.fn(async (url, init) => {
-      requests.push({ url, ...init, body: JSON.parse(init.body) });
+      const isJson = init.headers['Content-Type'] === 'application/json';
+      const body = isJson ? JSON.parse(init.body) : Object.fromEntries(new URLSearchParams(init.body));
+      requests.push({ url, ...init, rawBody: init.body, body });
       return responder(requests.length);
     });
-    return new OAuthTokenProvider(CREDS, { fetchImpl, now: () => clock });
+    return new OAuthTokenProvider(creds, { fetchImpl, now: () => clock });
   }
 
-  it('sends the password grant exactly as documented', async () => {
+  it('sends the password grant form-encoded by default', async () => {
     const p = provider();
     expect(await p.getToken()).toBe('token-1');
     const [r] = requests;
     expect(r.url).toBe(CREDS.url);
     expect(r.method).toBe('POST');
     expect(r.headers.Authorization).toBe('Basic QkFTSUMtS0VZ');
-    expect(r.headers['Content-Type']).toBe('application/json');
-    expect(r.body).toEqual({ grant_type: 'password', username: 'AK-ID-123', password: 'AK-SECRET-456' });
+    expect(r.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect(r.rawBody).toBe('grant_type=password&username=AK-ID-123&password=AK-SECRET-456');
+  });
+
+  it('form-encodes special characters in the secret correctly', async () => {
+    const p = provider(undefined, { ...CREDS, password: 'a+b&c=d/e' });
+    await p.getToken();
+    expect(requests[0].body.password).toBe('a+b&c=d/e');
+  });
+
+  it('can send JSON instead (CXONE_AUTH_BODY_FORMAT=json)', async () => {
+    const p = provider(undefined, { ...CREDS, bodyFormat: 'json' });
+    await p.getToken();
+    expect(requests[0].headers['Content-Type']).toBe('application/json');
+    expect(requests[0].body).toEqual({ grant_type: 'password', username: 'AK-ID-123', password: 'AK-SECRET-456' });
   });
 
   it('reuses the token, then renews it when less than 5 minutes remain', async () => {

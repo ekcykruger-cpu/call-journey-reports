@@ -75,16 +75,22 @@ const RENEW_BEFORE_MS = 5 * 60 * 1000; // get a new token when less than 5 minut
 const UNKNOWN_LIFETIME_MS = 30 * 60 * 1000; // if CXone gives no expiry, renew every 30 minutes to be safe
 const MINT_TIMEOUT_MS = 30_000;
 
-// Mints tokens with the OAuth password grant (format confirmed by the owner from the CXone docs):
-//   POST {url}  Authorization: Basic <key>  JSON body { grant_type: "password", username, password }
+// Mints tokens with the OAuth password grant:
+//   POST {url}  Authorization: Basic <key>  body: grant_type=password, username, password
+// Body format: form-encoded by default (a JSON body was rejected by CXone with "Missing required body
+// parameters", 2026-10-09); CXONE_AUTH_BODY_FORMAT=json switches back.
 export class OAuthTokenProvider {
   mode = 'automatic';
 
-  constructor({ url, basic, username, password }, { fetchImpl = (...a) => fetch(...a), now = () => Date.now() } = {}) {
+  constructor({ url, basic, username, password, bodyFormat = 'form' }, { fetchImpl = (...a) => fetch(...a), now = () => Date.now() } = {}) {
     this.url = url;
+    this.contentType = bodyFormat === 'json' ? 'application/json' : 'application/x-www-form-urlencoded';
     // Kept off `this` as plain fields so they can't end up in a JSON dump of the provider.
     const secrets = { basic, username, password };
-    this.requestBody = () => JSON.stringify({ grant_type: 'password', username: secrets.username, password: secrets.password });
+    this.requestBody = () => {
+      const fields = { grant_type: 'password', username: secrets.username, password: secrets.password };
+      return bodyFormat === 'json' ? JSON.stringify(fields) : new URLSearchParams(fields).toString();
+    };
     this.authHeader = () => `Basic ${secrets.basic}`;
     this.fetchImpl = fetchImpl;
     this.now = now;
@@ -131,7 +137,7 @@ export class OAuthTokenProvider {
     try {
       res = await this.fetchImpl(this.url, {
         method: 'POST',
-        headers: { Authorization: this.authHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { Authorization: this.authHeader(), 'Content-Type': this.contentType, Accept: 'application/json' },
         body: this.requestBody(),
         signal: AbortSignal.timeout(MINT_TIMEOUT_MS),
       });

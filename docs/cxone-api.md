@@ -53,13 +53,15 @@ so the real response structure can be confirmed from Railway's Deploy Logs.
 ## Authentication (`server/src/cxone/tokenProvider.js`)
 
 ### Automatic (used when all three `CXONE_AUTH_BASIC/USERNAME/PASSWORD` are set)
-OAuth password grant, format given by the owner from the CXone docs (2026-10-09):
+OAuth password grant (endpoint and fields from the owner, 2026-10-09):
 ```
 POST https://cxone.niceincontact.com/auth/token
 Authorization: Basic <ready-made key>
-Content-Type: application/json
-{ "grant_type": "password", "username": "<Access Key ID>", "password": "<Access Key Secret>" }
+Content-Type: application/x-www-form-urlencoded
+grant_type=password&username=<Access Key ID>&password=<Access Key Secret>
 ```
+A JSON body was rejected by CXone (`HTTP 400 invalid_request: Missing required body parameters`), so the
+default is form-encoded. `CXONE_AUTH_BODY_FORMAT=json` switches back if ever needed.
 - Expiry: `expires_in` from the response, else the JWT `exp` claim, else renew every 30 minutes **(verify lifetime)**.
 - A new token is minted when < 5 minutes remain; parallel callers share one request.
 - A 401 from a report/file call drops the token, mints a new one and retries once.
@@ -72,6 +74,7 @@ Content-Type: application/json
 | `CXONE_AUTH_BASIC` | the ready-made value that goes after `Basic ` |
 | `CXONE_AUTH_USERNAME` | Access Key ID |
 | `CXONE_AUTH_PASSWORD` | Access Key Secret |
+| `CXONE_AUTH_BODY_FORMAT` | optional: `form` (default) or `json` |
 
 Use a dedicated CXone API user whose access key only has the permissions needed (reports, files). To rotate:
 create a new key in CXone, update the variables, redeploy, revoke the old key.
