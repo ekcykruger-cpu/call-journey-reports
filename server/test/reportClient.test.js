@@ -89,6 +89,14 @@ describe('downloadReport against a fake CXone', () => {
     expect(calls).toHaveLength(4); // 1 run + 2 not-ready + 1 success
   });
 
+  it('on 401, gets a fresh token and retries once (automatic mode)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(tokenProvider, 'invalidate').mockReturnValueOnce(true);
+    fakeCxone((url, n) => (n === 1 ? json(401, { error: 'invalid_token' }) : url.includes('report-jobs') ? runOk() : fileOk()));
+    expect((await downloadReport(args)).csv).toBe(CSV);
+    expect(calls).toHaveLength(3); // rejected run, retried run, file
+  });
+
   it('turns 401 into a clear token error', async () => {
     fakeCxone(() => json(401, { error: 'invalid_token' }));
     await expect(downloadReport({ fileName: 'a.csv', startDate: '2026-10-04', endDate: '2026-10-05' })).rejects.toBeInstanceOf(CxoneAuthError);

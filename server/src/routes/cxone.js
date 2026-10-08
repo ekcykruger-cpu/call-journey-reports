@@ -12,7 +12,14 @@ cxoneRouter.use(requireAdmin);
 const tokenSchema = z.object({ token: z.string().trim().min(10).max(10_000) });
 const fetchSchema = z.object({ from: z.string().max(10), to: z.string().max(10) });
 
-// Never returns the token itself - only whether one is set and when it expires.
+function manualOnly(req, res, next) {
+  if (tokenProvider.mode !== 'manual') {
+    return res.status(400).json({ error: 'Tokens are minted automatically (CXONE_AUTH_* settings are set), so pasting is turned off.' });
+  }
+  next();
+}
+
+// Never returns the token or credentials - only status.
 cxoneRouter.get('/status', (req, res) => {
   res.json({
     token: tokenProvider.status(),
@@ -23,7 +30,7 @@ cxoneRouter.get('/status', (req, res) => {
   });
 });
 
-cxoneRouter.put('/token', (req, res) => {
+cxoneRouter.put('/token', manualOnly, (req, res) => {
   const parsed = tokenSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Paste the bearer token.' });
   tokenProvider.set(parsed.data.token);
@@ -31,8 +38,15 @@ cxoneRouter.put('/token', (req, res) => {
   res.json({ token: tokenProvider.status() });
 });
 
-cxoneRouter.delete('/token', (req, res) => {
+cxoneRouter.delete('/token', manualOnly, (req, res) => {
   tokenProvider.clear();
+  res.json({ token: tokenProvider.status() });
+});
+
+// Automatic mode: mint a new token now (also a quick way to test the CXONE_AUTH_* settings).
+cxoneRouter.post('/token/refresh', async (req, res) => {
+  if (tokenProvider.mode !== 'automatic') return res.status(400).json({ error: 'Automatic token minting is not configured.' });
+  await tokenProvider.refresh();
   res.json({ token: tokenProvider.status() });
 });
 

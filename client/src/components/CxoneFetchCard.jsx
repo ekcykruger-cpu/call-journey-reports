@@ -32,7 +32,9 @@ export default function CxoneFetchCard({ onQueued, busyElsewhere }) {
   }
 
   const token = status?.token;
-  const tokenProblem = token && (!token.isSet ? 'No CXone token set.' : token.expired ? 'The CXone token has expired.' : '');
+  // Automatic mode mints a token when needed, so only a pasted (manual) token can block fetching.
+  const tokenProblem =
+    token?.mode === 'manual' && (!token.isSet ? 'No CXone token set.' : token.expired ? 'The CXone token has expired.' : '');
 
   return (
     <form className="card" onSubmit={handleFetch}>

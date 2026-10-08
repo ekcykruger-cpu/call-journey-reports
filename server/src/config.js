@@ -30,5 +30,12 @@ export const config = {
     fileFolder: process.env.CXONE_FILE_FOLDER ?? 'Reports\\\\', // literal Reports\\ as in the owner's working URL
     fileNamePrefix: process.env.CXONE_FILE_PREFIX || 'CJR_540_',
     maxDaysPerFetch: Number(process.env.CXONE_MAX_DAYS_PER_FETCH) || 31,
+    // Automatic token minting (OAuth password grant). Used only when basic + username + password are all set.
+    auth: {
+      url: process.env.CXONE_AUTH_URL || 'https://cxone.niceincontact.com/auth/token',
+      basic: process.env.CXONE_AUTH_BASIC || '', // ready-made value that goes after "Basic " in the header
+      username: process.env.CXONE_AUTH_USERNAME || '', // Access Key ID
+      password: process.env.CXONE_AUTH_PASSWORD || '', // Access Key Secret
+    },
   },
 };

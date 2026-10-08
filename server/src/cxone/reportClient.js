@@ -63,7 +63,7 @@ export function isTrustedCxoneUrl(value) {
 }
 
 // `target` is either a path under CXONE_API_BASE or a full URL returned by CXone.
-async function cxoneRequest(method, target, label) {
+async function cxoneRequest(method, target, label, retried = false) {
   const token = await tokenProvider.getToken();
   const url = /^https?:\/\//i.test(target) ? target : `${config.cxone.apiBase}/${target}`;
   let res;
@@ -87,7 +87,15 @@ async function cxoneRequest(method, target, label) {
   console.log(`[cxone] ${label}: HTTP ${res.status}; response shape: ${JSON.stringify(body ? describeShape(body) : `text(${text.length} chars)`)}`);
 
   if (res.status === 401 || res.status === 403) {
-    throw new CxoneAuthError(`${label}: CXone rejected the bearer token (HTTP ${res.status}). Paste a new token on the Settings page.`);
+    // Automatic mode: the token may have been revoked early - get a fresh one and retry once.
+    if (res.status === 401 && !retried && tokenProvider.invalidate()) {
+      console.warn(`[cxone] ${label}: token rejected (401) - getting a new one and retrying once`);
+      return cxoneRequest(method, target, label, true);
+    }
+    const advice = tokenProvider.mode === 'automatic'
+      ? 'Check the CXone API user has permission for reports and files.'
+      : 'Paste a new token on the Settings page.';
+    throw new CxoneAuthError(`${label}: CXone rejected the bearer token (HTTP ${res.status}). ${advice}`);
   }
   if (res.status === 405) {
     throw new CxoneError(`${label}: CXone says the HTTP method is not allowed (405). Try setting CXONE_REPORT_JOB_METHOD to ${method === 'POST' ? 'GET' : 'POST'}.`, { status: 405 });

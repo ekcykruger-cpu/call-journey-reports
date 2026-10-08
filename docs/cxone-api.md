@@ -48,9 +48,37 @@ so the real response structure can be confirmed from Railway's Deploy Logs.
 - Whether `endDate` is inclusive; maximum range per call; which timezone startDate/endDate use (BU timezone or UTC).
 - Exact meaning of a 204 from the run-report call.
 - Whether saved files should be deleted afterwards (and the endpoint for it).
-- Authentication flow for minting tokens automatically (grant type, token endpoint, token lifetime).
+- Token lifetime and full token response for the password grant (code copes with `expires_in` or a JWT `exp`).
 
-## Authentication (current)
-`ManualTokenProvider` in `server/src/cxone/tokenProvider.js`: token pasted on the Settings page (or `CXONE_BEARER_TOKEN`),
-held **in memory only**, lost on restart/redeploy. Never returned by the API or logged. Expiry shown if the token is a JWT.
-Automatic minting = add an `OAuthTokenProvider` with the same `getToken()`/`status()` methods once the auth flow is confirmed.
+## Authentication (`server/src/cxone/tokenProvider.js`)
+
+### Automatic (used when all three `CXONE_AUTH_BASIC/USERNAME/PASSWORD` are set)
+OAuth password grant, format given by the owner from the CXone docs (2026-10-09):
+```
+POST https://cxone.niceincontact.com/auth/token
+Authorization: Basic <ready-made key>
+Content-Type: application/json
+{ "grant_type": "password", "username": "<Access Key ID>", "password": "<Access Key Secret>" }
+```
+- Expiry: `expires_in` from the response, else the JWT `exp` claim, else renew every 30 minutes **(verify lifetime)**.
+- A new token is minted when < 5 minutes remain; parallel callers share one request.
+- A 401 from a report/file call drops the token, mints a new one and retries once.
+- Response fields used: `access_token`, `expires_in` (others ignored) **(verify exact response)**.
+- Settings page shows mode, minted/expiry times and the last error, with a "Get new token now" button.
+
+| Variable | Value |
+|---|---|
+| `CXONE_AUTH_URL` | default `https://cxone.niceincontact.com/auth/token` |
+| `CXONE_AUTH_BASIC` | the ready-made value that goes after `Basic ` |
+| `CXONE_AUTH_USERNAME` | Access Key ID |
+| `CXONE_AUTH_PASSWORD` | Access Key Secret |
+
+Use a dedicated CXone API user whose access key only has the permissions needed (reports, files). To rotate:
+create a new key in CXone, update the variables, redeploy, revoke the old key.
+
+### Manual (fallback when the variables aren't set)
+Token pasted on the Settings page (or `CXONE_BEARER_TOKEN`), held **in memory only**, lost on restart/redeploy.
+
+### Never
+Credentials and tokens are never logged, stored in the database, returned by the API or sent to the browser.
+Errors show only the HTTP status and CXone's `error` / `error_description`.
