@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CxoneAuthError, OAuthTokenProvider } from '../src/cxone/tokenProvider.js';
+import { CxoneAuthError, missingAuthSettings, OAuthTokenProvider } from '../src/cxone/tokenProvider.js';
+
+describe('missingAuthSettings', () => {
+  it('none set = manual on purpose (no warning)', () => {
+    expect(missingAuthSettings({ basic: '', username: '', password: '' })).toEqual([]);
+  });
+  it('some set = names of the missing ones', () => {
+    expect(missingAuthSettings({ basic: 'x', username: 'y', password: '' })).toEqual(['CXONE_AUTH_PASSWORD']);
+    expect(missingAuthSettings({ basic: '', username: 'y', password: '' })).toEqual(['CXONE_AUTH_BASIC', 'CXONE_AUTH_PASSWORD']);
+  });
+  it('all set = nothing missing', () => {
+    expect(missingAuthSettings({ basic: 'x', username: 'y', password: 'z' })).toEqual([]);
+  });
+});
 
 // Fake CXone token server: checks the request format and hands out numbered tokens.
 const CREDS = { url: 'https://cxone.example.niceincontact.com/auth/token', basic: 'QkFTSUMtS0VZ', username: 'AK-ID-123', password: 'AK-SECRET-456' };

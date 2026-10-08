@@ -56,7 +56,10 @@ export default function SettingsPage() {
         <h2>CXone access</h2>
         <dl className="facts">
           <dt>Mode</dt>
-          <dd>{t ? (automatic ? 'Automatic - tokens are minted with the CXONE_AUTH_* settings' : 'Manual - paste a bearer token') : '…'}</dd>
+          <dd>
+            {t ? (automatic ? 'Automatic - tokens are minted with the CXONE_AUTH_* settings' : 'Manual - paste a bearer token') : '…'}
+            {t?.configWarning && <div className="text-error small">{t.configWarning}</div>}
+          </dd>
           <dt>Token</dt>
           <dd className={t?.expired ? 'text-error' : ''}>{describeToken(t)}</dd>
           <dt>{automatic ? 'Minted' : 'Pasted'}</dt>

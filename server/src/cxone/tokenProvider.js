@@ -60,6 +60,7 @@ export class ManualTokenProvider {
       expiresAt: expiresAt?.toISOString() ?? null,
       expired: expiresAt ? expiresAt <= new Date() : null,
       lastError: null,
+      configWarning: this.configWarning ?? null,
     };
   }
 
@@ -169,8 +170,24 @@ export class OAuthTokenProvider {
   }
 }
 
-const { auth } = config.cxone;
-export const tokenProvider =
-  auth.basic && auth.username && auth.password
-    ? new OAuthTokenProvider(auth)
-    : new ManualTokenProvider(process.env.CXONE_BEARER_TOKEN);
+// Automatic mode needs all three settings. If only some are set (e.g. a typo in a variable name),
+// say which are missing - names only, never values - instead of silently staying in manual mode.
+export function missingAuthSettings(auth) {
+  const settings = { CXONE_AUTH_BASIC: auth.basic, CXONE_AUTH_USERNAME: auth.username, CXONE_AUTH_PASSWORD: auth.password };
+  const missing = Object.keys(settings).filter((name) => !settings[name]);
+  return missing.length === Object.keys(settings).length ? [] : missing; // none set = manual mode on purpose
+}
+
+function createTokenProvider(auth) {
+  const missing = missingAuthSettings(auth);
+  if (auth.basic && auth.username && auth.password) return new OAuthTokenProvider(auth);
+
+  const manual = new ManualTokenProvider(process.env.CXONE_BEARER_TOKEN);
+  if (missing.length) {
+    manual.configWarning = `Automatic token minting is OFF: ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not set.`;
+    console.warn(`[cxone] ${manual.configWarning}`);
+  }
+  return manual;
+}
+
+export const tokenProvider = createTokenProvider(config.cxone.auth);
