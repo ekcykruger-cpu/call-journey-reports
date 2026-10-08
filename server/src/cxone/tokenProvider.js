@@ -77,8 +77,8 @@ const MINT_TIMEOUT_MS = 30_000;
 
 // Mints tokens with the OAuth password grant:
 //   POST {url}  Authorization: Basic <key>  body: grant_type=password, username, password
-// Body format: form-encoded by default (a JSON body was rejected by CXone with "Missing required body
-// parameters", 2026-10-09); CXONE_AUTH_BODY_FORMAT=json switches back.
+// Body format: x-www-form-urlencoded (confirmed by the owner, 2026-10-09; a JSON body is rejected with
+// "Missing required body parameters"). CXONE_AUTH_BODY_FORMAT=json exists only as an escape hatch.
 export class OAuthTokenProvider {
   mode = 'automatic';
 

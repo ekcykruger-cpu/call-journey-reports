@@ -60,8 +60,8 @@ Authorization: Basic <ready-made key>
 Content-Type: application/x-www-form-urlencoded
 grant_type=password&username=<Access Key ID>&password=<Access Key Secret>
 ```
-A JSON body was rejected by CXone (`HTTP 400 invalid_request: Missing required body parameters`), so the
-default is form-encoded. `CXONE_AUTH_BODY_FORMAT=json` switches back if ever needed.
+Body format **x-www-form-urlencoded confirmed by the owner** (2026-10-09); a JSON body is rejected with
+`HTTP 400 invalid_request: Missing required body parameters`. `CXONE_AUTH_BODY_FORMAT=json` exists but shouldn't be needed.
 - Expiry: `expires_in` from the response, else the JWT `exp` claim, else renew every 30 minutes **(verify lifetime)**.
 - A new token is minted when < 5 minutes remain; parallel callers share one request.
 - A 401 from a report/file call drops the token, mints a new one and retries once.
