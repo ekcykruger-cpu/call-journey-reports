@@ -4,7 +4,8 @@ import Layout from './components/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import SetPasswordPage from './pages/SetPasswordPage.jsx';
-import HomePage from './pages/HomePage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
+import MetricBuilderPage from './pages/MetricBuilderPage.jsx';
 import UsersPage from './pages/UsersPage.jsx';
 import ImportPage from './pages/ImportPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -21,7 +22,8 @@ export default function App() {
 
           {/* Logged-in pages share the header/nav */}
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/metrics" element={<RequireAuth admin><MetricBuilderPage /></RequireAuth>} />
             <Route path="/data" element={<RequireAuth admin><ImportPage /></RequireAuth>} />
             <Route path="/users" element={<RequireAuth admin><UsersPage /></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth admin><SettingsPage /></RequireAuth>} />

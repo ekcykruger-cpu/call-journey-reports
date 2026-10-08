@@ -17,6 +17,7 @@ export default function Layout() {
           <span className="brand">Call Journey Reports</span>
           <nav>
             <NavLink to="/" end>Dashboard</NavLink>
+            {user.role === 'admin' && <NavLink to="/metrics">Metrics</NavLink>}
             {user.role === 'admin' && <NavLink to="/data">Data</NavLink>}
             {user.role === 'admin' && <NavLink to="/users">Users</NavLink>}
             {user.role === 'admin' && <NavLink to="/settings">Settings</NavLink>}

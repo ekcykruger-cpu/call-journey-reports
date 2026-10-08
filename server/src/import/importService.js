@@ -168,6 +168,29 @@ export async function processImport(importId, text) {
   }
 }
 
+// Deletes call data. Users, logins and metric definitions are never touched.
+//   all:   every journey, leg and import-history row
+//   range: journeys whose first leg started on these Sydney dates (inclusive), with all their legs
+//          (a leg's journey_id is its root's id, so whole journeys go); import history is kept as a record
+export async function clearCallData({ scope, from = null, to = null }) {
+  return withTransaction(async (conn) => {
+    if (scope === 'all') {
+      const [journeys] = await conn.query('DELETE FROM journeys');
+      const [legs] = await conn.query('DELETE FROM contact_legs');
+      const [imports] = await conn.query('DELETE FROM imports');
+      return { journeys: journeys.affectedRows, legs: legs.affectedRows, imports: imports.affectedRows };
+    }
+    const range = [`${from} 00:00:00`, `${to} 23:59:59`];
+    const [legs] = await conn.query(
+      `DELETE l FROM contact_legs l JOIN journeys j ON j.journey_id = l.journey_id
+        WHERE j.start_local BETWEEN ? AND ?`,
+      range,
+    );
+    const [journeys] = await conn.query('DELETE FROM journeys WHERE start_local BETWEEN ? AND ?', range);
+    return { journeys: journeys.affectedRows, legs: legs.affectedRows, imports: 0 };
+  });
+}
+
 export async function listImports(limit = 50) {
   const [rows] = await requirePool().query(
     `SELECT i.id, i.source, i.file_name, i.range_start, i.range_end, i.status, i.rows_read, i.rows_upserted,

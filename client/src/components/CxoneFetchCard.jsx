@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-
-// Today's date in Sydney as YYYY-MM-DD (the 'en-CA' locale formats dates that way).
-const sydneyDate = (offsetDays = 0) =>
-  new Date(Date.now() + offsetDays * 86400000).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+import { sydneyDate } from '../utils/format.js';
 
 export default function CxoneFetchCard({ onQueued, busyElsewhere }) {
   const [status, setStatus] = useState(null);

@@ -19,4 +19,8 @@ Short record of design decisions and why. Add a new entry rather than editing ol
 | 14 | 2026-10-07 | Tests use an anonymised fixture (`server/test/fixtures/report540-anon.csv`) | Real sample stays out of Git |
 | 15 | 2026-10-08 | CXone fetch = one request per Sydney day, run in the background, one fetch at a time; unverified API details are env settings + runtime detection, with response *shape* logged | CXone docs couldn't be read automatically; overlap-safe and correctable without code changes |
 | 16 | 2026-10-08 | Imports left queued/running are marked failed at startup | A redeploy mid-fetch would otherwise leave them "running" forever |
+| 17 | 2026-10-08 | Each chart chooses timeline or 24h-profile x-axis; global skill filter uses the journey's first (entry) skill | Owner's choice; entry skill = where the call was offered |
+| 18 | 2026-10-08 | Dashboard choices (dates, hidden charts, per-chart line/bar and axis) remembered per browser in localStorage | Convenience only; nothing breaks if storage is blocked |
+| 19 | 2026-10-08 | "Clear call data" deletes journeys/legs (all, or by start date range) and keeps users, logins and metrics; typed DELETE confirmation | Owner asked to clear the DB; wiping users would lock everyone out |
+| 20 | 2026-10-08 | Chart colour #2a78d6 (light) / #4a90e8 (dark), validated with the dataviz palette checker | Contrast and lightness pass on both surfaces |
 | 12 | 2026-10-07 | Until Gmail is set up, invite/reset emails are written to the server log and invite links are shown to the admin | Lets login work end to end before the Google Cloud setup |

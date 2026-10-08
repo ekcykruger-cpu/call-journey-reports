@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import CxoneFetchCard from '../components/CxoneFetchCard.jsx';
+import ClearDataCard from '../components/ClearDataCard.jsx';
 
 const MAX_MB = 50;
 
@@ -110,6 +111,8 @@ export default function ImportPage() {
           </tbody>
         </table>
       </div>
+
+      <ClearDataCard onCleared={loadHistory} />
     </>
   );
 }
