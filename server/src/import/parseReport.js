@@ -1,6 +1,7 @@
 import { parse } from 'csv-parse/sync';
 import { DateTime } from 'luxon';
 import { config } from '../config.js';
+import { parseCsvLenient } from './lenientCsv.js';
 
 // Turns CXone report 540 CSV text into leg objects whose keys match the contact_legs table.
 // See docs/data-dictionary.md for the columns.
@@ -100,9 +101,23 @@ export function toTimestamps(dateValue, timeValue, zone = config.timezone) {
   return { start_local: local.toFormat(SQL_FORMAT), start_utc: local.toUTC().toFormat(SQL_FORMAT) };
 }
 
+// Standard CSV first; if CXone's file has unescaped quotes, fall back to the tolerant reader.
+function readCsv(text) {
+  try {
+    return { records: parse(text, { bom: true, relax_column_count: true, skip_empty_lines: true, trim: true }), note: null };
+  } catch (err) {
+    if (!/quote/i.test(err.message)) throw err;
+    const where = err.lines ? ` (first one on line ${err.lines})` : '';
+    return {
+      records: parseCsvLenient(text),
+      note: `The file had quotation marks that weren't escaped${where}, so it was read in tolerant mode. Any row that still couldn't be read is listed below.`,
+    };
+  }
+}
+
 // Returns { legs, rowsRead, skipped, errors[] }. Throws only if the file as a whole is unusable.
 export function parseReportCsv(text) {
-  const records = parse(text, { bom: true, relax_column_count: true, skip_empty_lines: true, trim: true });
+  const { records, note } = readCsv(text);
   if (records.length === 0) throw new Error('The file is empty.');
 
   const header = records[0].map(normalise);
@@ -131,5 +146,6 @@ export function parseReportCsv(text) {
       if (errors.length < MAX_ERRORS) errors.push(`Row ${r + 1}: ${err.message}`);
     }
   }
+  if (note) errors.unshift(note);
   return { legs: [...legs.values()], rowsRead, skipped, errors };
 }

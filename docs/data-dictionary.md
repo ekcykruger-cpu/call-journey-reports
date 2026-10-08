@@ -44,5 +44,10 @@ One row = one **contact leg**. A customer call that is transferred produces seve
 | Disp_Comments | text | |
 | Tags | text | |
 
+## CSV quirks
+- CXone's export can contain **unescaped quotation marks** inside quoted text fields (seen 2026-10-08 for
+  2026-06-16, line 2320: `Invalid Closing Quote`). The importer then falls back to a tolerant reader
+  (`server/src/import/lenientCsv.js`) and adds a note to the import history.
+
 ## Timezone
 Australia/Sydney (decision #5).
