@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { usersRouter } from './routes/users.js';
 import { importsRouter } from './routes/imports.js';
 import { cxoneRouter } from './routes/cxone.js';
+import { metricsRouter } from './routes/metrics.js';
 import { failInterruptedImports } from './import/importService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,7 @@ api.use('/auth', authRouter);
 api.use('/users', usersRouter);
 api.use('/imports', importsRouter);
 api.use('/cxone', cxoneRouter);
+api.use('/metrics', requireAuth, metricsRouter);
 api.get('/hello', requireAuth, (req, res) => {
   res.json({ message: `Hello ${req.user.displayName || req.user.email}` });
 });
